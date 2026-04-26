@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="My Wallet">
+  <defs>
+    <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#0f4c5c"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="168" cy="160" r="44" fill="#f8fafc" opacity="0.92"/>
+  <path d="M151 254h210c24 0 43 19 43 43v70c0 24-19 43-43 43H151c-24 0-43-19-43-43v-70c0-24 19-43 43-43Z" fill="#f8fafc" opacity="0.96"/>
+  <path d="M189 186h149c15 0 27 12 27 27s-12 27-27 27H189c-15 0-27-12-27-27s12-27 27-27Z" fill="#d9eff3"/>
+  <path d="M167 334h178" stroke="#0f4c5c" stroke-width="20" stroke-linecap="round"/>
+  <path d="M167 372h116" stroke="#0f4c5c" stroke-width="20" stroke-linecap="round"/>
+  <path d="M348 326c15 0 27 12 27 27s-12 27-27 27-27-12-27-27 12-27 27-27Z" fill="#0f4c5c"/>
+</svg>

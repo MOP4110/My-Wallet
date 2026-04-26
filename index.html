@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="description" content="A simple offline-first personal finance tracker with local IndexedDB storage." />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <title>My Wallet</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Local-first finance</p>
+          <h1>My Wallet</h1>
+          <p class="subtitle">
+            Track expenses fast on your phone. Everything stays on-device in IndexedDB and works offline.
+          </p>
+        </div>
+        <div class="hero-actions">
+          <button id="installButton" class="secondary hidden" type="button">Install app</button>
+          <button id="exportButton" class="secondary" type="button">Export backup</button>
+          <button id="importButton" class="secondary" type="button">Import backup</button>
+          <input id="importFile" class="hidden" type="file" accept="application/json,.json" />
+          <div class="status-pill" id="syncStatus">Offline ready</div>
+        </div>
+      </header>
+
+      <section class="summary-grid" aria-label="Summary">
+        <article class="summary-card">
+          <span>Today</span>
+          <strong id="todayTotal">$0.00</strong>
+        </article>
+        <article class="summary-card">
+          <span>This week</span>
+          <strong id="weekTotal">$0.00</strong>
+        </article>
+        <article class="summary-card">
+          <span>This month</span>
+          <strong id="monthTotal">$0.00</strong>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Quick expense</h2>
+          <p>Add a one-off expense in a few taps.</p>
+        </div>
+        <form id="expenseForm" class="stack-form">
+          <input type="hidden" id="expenseId" />
+          <div class="form-grid compact">
+            <label>
+              <span>Amount</span>
+              <input id="expenseAmount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="12.50" required />
+            </label>
+            <label>
+              <span>Category</span>
+              <select id="expenseCategory" required></select>
+            </label>
+          </div>
+          <div class="form-grid compact">
+            <label>
+              <span>Date</span>
+              <input id="expenseDate" type="date" required />
+            </label>
+            <label class="grow">
+              <span>Note</span>
+              <input id="expenseNote" type="text" maxlength="120" placeholder="Coffee, taxi, groceries..." />
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="submit" id="expenseSubmit">Add expense</button>
+            <button type="button" id="expenseCancel" class="secondary hidden">Cancel edit</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Recurring expenses</h2>
+          <p>Define repeat costs once. The app generates them when calculating totals and recent activity.</p>
+        </div>
+        <form id="recurringForm" class="stack-form">
+          <input type="hidden" id="recurringId" />
+          <div class="form-grid compact">
+            <label>
+              <span>Amount</span>
+              <input id="recurringAmount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="42.00" required />
+            </label>
+            <label>
+              <span>Category</span>
+              <select id="recurringCategory" required></select>
+            </label>
+          </div>
+          <div class="form-grid compact">
+            <label>
+              <span>Start date</span>
+              <input id="recurringStart" type="date" required />
+            </label>
+            <label>
+              <span>Frequency</span>
+              <select id="recurringFrequency" required>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </label>
+          </div>
+          <div class="form-grid compact">
+            <label>
+              <span>Optional end date</span>
+              <input id="recurringEnd" type="date" />
+            </label>
+            <label class="checkbox-row">
+              <input id="recurringActive" type="checkbox" checked />
+              <span>Active</span>
+            </label>
+          </div>
+          <label>
+            <span>Note</span>
+            <input id="recurringNote" type="text" maxlength="120" placeholder="Rent, subscription, insurance..." />
+          </label>
+          <div class="form-actions">
+            <button type="submit" id="recurringSubmit">Add recurring expense</button>
+            <button type="button" id="recurringCancel" class="secondary hidden">Cancel edit</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Filters</h2>
+          <p>Search by note or category and narrow the timeline on the phone.</p>
+        </div>
+        <div class="toolbar">
+          <label class="search-field">
+            <span>Search</span>
+            <input id="searchInput" type="search" placeholder="Search expenses" />
+          </label>
+          <div class="filter-grid">
+            <label>
+              <span>Category</span>
+              <select id="filterCategory"></select>
+            </label>
+            <label>
+              <span>Source</span>
+              <select id="filterSource">
+                <option value="all">All</option>
+                <option value="manual">Manual</option>
+                <option value="recurring">Recurring</option>
+              </select>
+            </label>
+            <label>
+              <span>Range</span>
+              <select id="filterRange">
+                <option value="7">Last 7 days</option>
+                <option value="30" selected>Last 30 days</option>
+                <option value="90">Last 90 days</option>
+                <option value="all">All time</option>
+              </select>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Recent activity</h2>
+          <p id="activitySubtitle">Showing the latest local activity.</p>
+        </div>
+        <div id="expenseList" class="stack-list" aria-live="polite"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Recurring plans</h2>
+          <p>These are stored separately and expanded virtually when needed.</p>
+        </div>
+        <div id="recurringList" class="stack-list" aria-live="polite"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Categories</h2>
+          <p>Editable defaults that stay local to this device.</p>
+        </div>
+        <div id="categoryList" class="category-list" aria-live="polite"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Backup</h2>
+          <p>Export this device’s local data as a JSON file, or restore it on another phone or computer.</p>
+        </div>
+        <div class="backup-box">
+          <p class="fine-print">
+            The exported file contains your categories, manual expenses, recurring plans, and a timestamp. You can
+            open it in any text editor to inspect the JSON, or import it back into My Wallet from the file picker.
+          </p>
+          <div class="actions-row">
+            <button id="exportButtonBottom" type="button">Download backup</button>
+            <button id="importButtonBottom" type="button" class="secondary">Choose file to import</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
