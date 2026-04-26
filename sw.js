@@ -1,4 +1,4 @@
-const CACHE_NAME = "ledger-loop-cache-v1";
+const CACHE_NAME = "my-wallet-cache-v2";
 const ASSETS = [
   "/",
   "/index.html",
