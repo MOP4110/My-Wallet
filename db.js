@@ -132,10 +132,13 @@ export async function listExpenses() {
   });
 }
 
+export const listTransactions = listExpenses;
+
 export async function saveExpense(expense) {
   const now = new Date().toISOString();
   const payload = {
     ...expense,
+    entryType: expense.entryType === "income" ? "income" : "expense",
     amountCents: Math.round(Number(expense.amountCents) || 0),
     createdAt: expense.createdAt || now,
     updatedAt: now,
@@ -143,9 +146,13 @@ export async function saveExpense(expense) {
   return withStore("expenses", "readwrite", (store) => requestToPromise(store.put(payload)));
 }
 
+export const saveTransaction = saveExpense;
+
 export async function deleteExpense(id) {
   return withStore("expenses", "readwrite", (store) => requestToPromise(store.delete(id)));
 }
+
+export const deleteTransaction = deleteExpense;
 
 export async function listRecurring() {
   const items = await withStore("recurring", "readonly", (store) => requestToPromise(store.getAll()));
@@ -198,7 +205,10 @@ export async function replaceAllData({ settings, expenses, recurring }) {
     settingsStore.put(normalizedSettings);
     normalizedExpenses.forEach((expense) => {
       if (expense && expense.id) {
-        expenseStore.put(expense);
+        expenseStore.put({
+          ...expense,
+          entryType: expense.entryType === "income" ? "income" : "expense",
+        });
       }
     });
     normalizedRecurring.forEach((plan) => {

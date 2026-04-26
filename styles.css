@@ -186,6 +186,11 @@ h1 {
   font-size: clamp(1.15rem, 5vw, 1.65rem);
 }
 
+.summary-card strong.negative,
+.chart-kpi strong.negative {
+  color: #b42318;
+}
+
 .panel {
   border-radius: var(--radius);
   padding: 18px;
@@ -229,6 +234,148 @@ h1 {
   gap: 10px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.chart-controls {
+  display: grid;
+  gap: 12px;
+}
+
+.chart-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.chart-tab {
+  border-radius: 14px;
+  background: #edf2ff;
+  color: #486284;
+  box-shadow: none;
+}
+
+.chart-tab.active {
+  background: var(--accent);
+  color: white;
+}
+
+.year-switcher {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.year-switcher button {
+  min-width: 3rem;
+}
+
+.year-label {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.chart-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.chart-summary {
+  display: grid;
+  gap: 12px;
+}
+
+.chart-bar-track {
+  position: relative;
+  height: 18px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #eef2f7;
+  border: 1px solid var(--line);
+  display: flex;
+}
+
+.chart-bar-income,
+.chart-bar-expense {
+  height: 100%;
+}
+
+.chart-bar-income {
+  background: linear-gradient(90deg, #32a852, #83c95f);
+}
+
+.chart-bar-expense {
+  background: linear-gradient(90deg, #f97316, #ef4444);
+}
+
+.chart-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.chart-kpi {
+  padding: 12px;
+  border-radius: 16px;
+  background: #f8fbff;
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 4px;
+}
+
+.chart-kpi span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.chart-kpi strong {
+  font-size: 1rem;
+}
+
+.chart-breakdown {
+  display: grid;
+  gap: 10px;
+}
+
+.breakdown-row {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #fbfdff;
+  border: 1px solid var(--line);
+}
+
+.breakdown-left {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.breakdown-left strong {
+  font-size: 1rem;
+}
+
+.breakdown-left span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.breakdown-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #eef2f7;
+  overflow: hidden;
+}
+
+.breakdown-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0f4c5c, #1d4ed8);
 }
 
 .checkbox-row {
@@ -291,6 +438,14 @@ h1 {
   font-size: 1.05rem;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.expense-card[data-entry-type="income"] .amount {
+  color: #15803d;
+}
+
+.expense-card[data-entry-type="expense"] .amount {
+  color: #b42318;
 }
 
 .badge {

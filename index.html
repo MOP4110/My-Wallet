@@ -32,23 +32,23 @@
 
       <section class="summary-grid" aria-label="Summary">
         <article class="summary-card">
-          <span>Today</span>
+          <span>Today net</span>
           <strong id="todayTotal">$0.00</strong>
         </article>
         <article class="summary-card">
-          <span>This week</span>
+          <span>This week net</span>
           <strong id="weekTotal">$0.00</strong>
         </article>
         <article class="summary-card">
-          <span>This month</span>
+          <span>This month net</span>
           <strong id="monthTotal">$0.00</strong>
         </article>
       </section>
 
       <section class="panel">
         <div class="panel-header">
-          <h2>Quick expense</h2>
-          <p>Add a one-off expense in a few taps.</p>
+          <h2>Quick transaction</h2>
+          <p>Add an income or expense in a few taps.</p>
         </div>
         <form id="expenseForm" class="stack-form">
           <input type="hidden" id="expenseId" />
@@ -58,25 +58,78 @@
               <input id="expenseAmount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="12.50" required />
             </label>
             <label>
-              <span>Category</span>
-              <select id="expenseCategory" required></select>
+              <span>Type</span>
+              <select id="expenseType" required>
+                <option value="expense">Expense</option>
+                <option value="income">Income</option>
+              </select>
             </label>
           </div>
           <div class="form-grid compact">
             <label>
+              <span>Category</span>
+              <select id="expenseCategory" required></select>
+            </label>
+            <label>
               <span>Date</span>
               <input id="expenseDate" type="date" required />
             </label>
-            <label class="grow">
-              <span>Note</span>
-              <input id="expenseNote" type="text" maxlength="120" placeholder="Coffee, taxi, groceries..." />
-            </label>
           </div>
+          <label class="grow">
+            <span>Note</span>
+            <input id="expenseNote" type="text" maxlength="120" placeholder="Salary, coffee, taxi, groceries..." />
+          </label>
           <div class="form-actions">
-            <button type="submit" id="expenseSubmit">Add expense</button>
+            <button type="submit" id="expenseSubmit">Add transaction</button>
             <button type="button" id="expenseCancel" class="secondary hidden">Cancel edit</button>
           </div>
         </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Charts</h2>
+          <p>Balance and category breakdown by year.</p>
+        </div>
+        <div class="chart-controls">
+          <div class="chart-tabs" role="tablist" aria-label="Chart types">
+            <button type="button" class="chart-tab active" data-chart-tab="income">Income</button>
+            <button type="button" class="chart-tab" data-chart-tab="balance">Balance</button>
+            <button type="button" class="chart-tab" data-chart-tab="expense">Expense</button>
+          </div>
+          <div class="year-switcher">
+            <button type="button" class="secondary" id="yearPrev">‹</button>
+            <div class="year-label" id="chartYearLabel">2025</div>
+            <button type="button" class="secondary" id="yearNext">›</button>
+          </div>
+        </div>
+        <div class="chart-panel">
+          <div class="chart-summary">
+            <div class="chart-bar-track">
+              <div class="chart-bar-income" id="incomeBar"></div>
+              <div class="chart-bar-expense" id="expenseBar"></div>
+            </div>
+            <div class="chart-kpis">
+              <div class="chart-kpi">
+                <span id="chartIncomeLabel">Income</span>
+                <strong id="chartIncomeTotal">$0.00</strong>
+              </div>
+              <div class="chart-kpi">
+                <span id="chartExpenseLabel">Expense</span>
+                <strong id="chartExpenseTotal">$0.00</strong>
+              </div>
+              <div class="chart-kpi">
+                <span id="chartBalanceLabel">Balance</span>
+                <strong id="chartBalanceTotal">$0.00</strong>
+              </div>
+              <div class="chart-kpi">
+                <span>Transactions</span>
+                <strong id="chartTransactionsCount">0</strong>
+              </div>
+            </div>
+          </div>
+          <div id="chartBreakdown" class="chart-breakdown" aria-live="polite"></div>
+        </div>
       </section>
 
       <section class="panel">
@@ -145,6 +198,14 @@
             <label>
               <span>Category</span>
               <select id="filterCategory"></select>
+            </label>
+            <label>
+              <span>Type</span>
+              <select id="filterType">
+                <option value="all">All</option>
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+              </select>
             </label>
             <label>
               <span>Source</span>

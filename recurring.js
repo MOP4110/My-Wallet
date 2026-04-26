@@ -145,6 +145,7 @@ export function buildOccurrence(plan, date) {
     id: `${plan.id}:${date}`,
     sourceId: plan.id,
     sourceType: "recurring",
+    entryType: "expense",
     date,
     amountCents: plan.amountCents,
     category: plan.category,

@@ -5,10 +5,12 @@ My Wallet is a simple mobile-first personal finance tracker. It works offline, s
 ## What it does
 
 - Add expenses quickly with amount, category, date, and note
-- Edit and delete manual expenses
+- Add incomes too, so you can see a real balance
+- Edit and delete manual transactions
 - Track recurring expenses without duplicating them into storage
 - Show today, weekly, and monthly totals
-- Search and filter expenses
+- View yearly charts for income, balance, and expense breakdowns
+- Search and filter transactions
 - Edit categories locally
 - Export and import a JSON backup
 
@@ -28,7 +30,7 @@ All user data stays on the device where the app is opened.
 
 Stored locally:
 
-- manual expenses
+- manual transactions
 - recurring expense definitions
 - categories
 - app settings

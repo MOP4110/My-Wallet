@@ -38,6 +38,20 @@ const els = {
   todayTotal: document.getElementById("todayTotal"),
   weekTotal: document.getElementById("weekTotal"),
   monthTotal: document.getElementById("monthTotal"),
+  chartYearLabel: document.getElementById("chartYearLabel"),
+  yearPrev: document.getElementById("yearPrev"),
+  yearNext: document.getElementById("yearNext"),
+  incomeBar: document.getElementById("incomeBar"),
+  expenseBar: document.getElementById("expenseBar"),
+  chartIncomeLabel: document.getElementById("chartIncomeLabel"),
+  chartExpenseLabel: document.getElementById("chartExpenseLabel"),
+  chartBalanceLabel: document.getElementById("chartBalanceLabel"),
+  chartIncomeTotal: document.getElementById("chartIncomeTotal"),
+  chartExpenseTotal: document.getElementById("chartExpenseTotal"),
+  chartBalanceTotal: document.getElementById("chartBalanceTotal"),
+  chartTransactionsCount: document.getElementById("chartTransactionsCount"),
+  chartBreakdown: document.getElementById("chartBreakdown"),
+  chartTabs: Array.from(document.querySelectorAll("[data-chart-tab]")),
   activitySubtitle: document.getElementById("activitySubtitle"),
   expenseList: document.getElementById("expenseList"),
   recurringList: document.getElementById("recurringList"),
@@ -45,6 +59,7 @@ const els = {
   expenseForm: document.getElementById("expenseForm"),
   expenseId: document.getElementById("expenseId"),
   expenseAmount: document.getElementById("expenseAmount"),
+  expenseType: document.getElementById("expenseType"),
   expenseCategory: document.getElementById("expenseCategory"),
   expenseDate: document.getElementById("expenseDate"),
   expenseNote: document.getElementById("expenseNote"),
@@ -63,6 +78,7 @@ const els = {
   recurringCancel: document.getElementById("recurringCancel"),
   searchInput: document.getElementById("searchInput"),
   filterCategory: document.getElementById("filterCategory"),
+  filterType: document.getElementById("filterType"),
   filterSource: document.getElementById("filterSource"),
   filterRange: document.getElementById("filterRange"),
 };
@@ -75,8 +91,14 @@ const state = {
   filters: {
     search: "",
     category: "all",
+    type: "all",
     source: "all",
     range: "30",
+  },
+  chart: {
+    tab: "income",
+    year: new Date().getFullYear(),
+    years: [],
   },
   deferredInstallPrompt: null,
 };
@@ -116,19 +138,42 @@ function getSummaryTotals(expenses) {
   const monthStart = startOfMonth(todayDate);
 
   return {
-    today: sumInRange(expenses, todayDate, todayDate),
-    week: sumInRange(expenses, weekStart, todayDate),
-    month: sumInRange(expenses, monthStart, todayDate),
+    today: sumSignedInRange(expenses, todayDate, todayDate),
+    week: sumSignedInRange(expenses, weekStart, todayDate),
+    month: sumSignedInRange(expenses, monthStart, todayDate),
   };
 }
 
-function sumInRange(expenses, start, end) {
+function sumSignedInRange(expenses, start, end) {
   return expenses.reduce((total, expense) => {
     if (expense.date >= start && expense.date <= end) {
-      return total + Number(expense.amountCents || 0);
+      return total + Number(expense.amountCents || 0) * getSign(expense);
     }
     return total;
   }, 0);
+}
+
+function yearRange(year) {
+  return {
+    start: `${year}-01-01`,
+    end: `${year}-12-31`,
+  };
+}
+
+function getAvailableYears(entries) {
+  const years = new Set([new Date().getFullYear()]);
+  entries.forEach((entry) => {
+    if (entry?.date) {
+      years.add(Number(entry.date.slice(0, 4)));
+    }
+  });
+  state.recurring.forEach((plan) => {
+    if (plan?.startDate) years.add(Number(plan.startDate.slice(0, 4)));
+    if (plan?.endDate) years.add(Number(plan.endDate.slice(0, 4)));
+  });
+  return Array.from(years)
+    .filter((year) => Number.isFinite(year))
+    .sort((a, b) => a - b);
 }
 
 function filterExpenses(expenses, filters) {
@@ -145,9 +190,163 @@ function filterExpenses(expenses, filters) {
       filters.source === "all" ||
       (filters.source === "manual" && expense.sourceType !== "recurring") ||
       (filters.source === "recurring" && expense.sourceType === "recurring");
+    const matchesType =
+      filters.type === "all" ||
+      (filters.type === "income" && expense.entryType === "income") ||
+      (filters.type === "expense" && expense.entryType !== "income");
 
-    return matchesSearch && matchesCategory && matchesSource;
+    return matchesSearch && matchesCategory && matchesSource && matchesType;
   });
+}
+
+function getSign(entry) {
+  return entry.entryType === "income" ? 1 : -1;
+}
+
+function sumByType(expenses, type) {
+  return expenses.reduce((total, expense) => {
+    const isIncome = expense.entryType === "income";
+    if ((type === "income" && isIncome) || (type === "expense" && !isIncome)) {
+      return total + Number(expense.amountCents || 0);
+    }
+    return total;
+  }, 0);
+}
+
+function buildCategoryBreakdown(expenses, type) {
+  const filtered = expenses.filter((expense) =>
+    type === "income" ? expense.entryType === "income" : expense.entryType !== "income"
+  );
+  const total = filtered.reduce((sum, expense) => sum + Number(expense.amountCents || 0), 0);
+  const categories = new Map();
+
+  filtered.forEach((expense) => {
+    categories.set(expense.category, (categories.get(expense.category) || 0) + Number(expense.amountCents || 0));
+  });
+
+  return Array.from(categories.entries())
+    .map(([category, amountCents]) => ({
+      category,
+      amountCents,
+      percent: total > 0 ? (amountCents / total) * 100 : 0,
+    }))
+    .sort((a, b) => b.amountCents - a.amountCents);
+}
+
+function calculateChartData(year) {
+  const range = yearRange(year);
+  const combined = buildCombinedExpenses(state.expenses, state.recurring, range.start, range.end);
+  const incomeTotal = sumByType(combined, "income");
+  const expenseTotal = sumByType(combined, "expense");
+  const balance = incomeTotal - expenseTotal;
+  const transactionCount = combined.length;
+  const maxTotal = Math.max(incomeTotal, expenseTotal, 1);
+
+  return {
+    combined,
+    incomeTotal,
+    expenseTotal,
+    balance,
+    transactionCount,
+    maxTotal,
+    breakdown:
+      state.chart.tab === "income"
+        ? buildCategoryBreakdown(combined, "income")
+        : buildCategoryBreakdown(combined, "expense"),
+  };
+}
+
+function setChartTab(tab) {
+  state.chart.tab = tab;
+  els.chartTabs.forEach((button) => {
+    button.classList.toggle("active", button.dataset.chartTab === tab);
+  });
+  renderCharts();
+}
+
+function setChartYear(year) {
+  state.chart.year = year;
+  renderCharts();
+}
+
+function syncChartYearBounds() {
+  const years = getAvailableYears(state.expenses);
+  state.chart.years = years.length ? years : [new Date().getFullYear()];
+  if (!state.chart.years.includes(state.chart.year)) {
+    state.chart.year = state.chart.years[state.chart.years.length - 1];
+  }
+  els.yearPrev.disabled = state.chart.years.indexOf(state.chart.year) <= 0;
+  els.yearNext.disabled = state.chart.years.indexOf(state.chart.year) >= state.chart.years.length - 1;
+  els.chartYearLabel.textContent = String(state.chart.year);
+}
+
+function renderChartBreakdown(items, emptyMessage) {
+  els.chartBreakdown.innerHTML = "";
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = emptyMessage;
+    els.chartBreakdown.appendChild(empty);
+    return;
+  }
+
+  items.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "breakdown-row";
+
+    const left = document.createElement("div");
+    left.className = "breakdown-left";
+    const title = document.createElement("strong");
+    title.textContent = item.category;
+    const meta = document.createElement("span");
+    meta.textContent = `${item.percent.toFixed(1)}% · ${formatMoney(item.amountCents)}`;
+    left.append(title, meta);
+
+    const barWrap = document.createElement("div");
+    barWrap.className = "breakdown-bar-track";
+    const bar = document.createElement("div");
+    bar.className = "breakdown-bar";
+    bar.style.width = `${Math.max(item.percent, 3)}%`;
+    barWrap.appendChild(bar);
+
+    row.append(left, barWrap);
+    els.chartBreakdown.appendChild(row);
+  });
+}
+
+function renderCharts() {
+  syncChartYearBounds();
+  const data = calculateChartData(state.chart.year);
+
+  const incomeWidth = data.maxTotal ? (data.incomeTotal / data.maxTotal) * 100 : 0;
+  const expenseWidth = data.maxTotal ? (data.expenseTotal / data.maxTotal) * 100 : 0;
+
+  els.incomeBar.style.width = `${incomeWidth}%`;
+  els.expenseBar.style.width = `${expenseWidth}%`;
+  els.chartIncomeTotal.textContent = formatMoney(data.incomeTotal);
+  els.chartExpenseTotal.textContent = formatMoney(data.expenseTotal);
+  els.chartBalanceTotal.textContent = formatMoney(data.balance);
+  els.chartTransactionsCount.textContent = String(data.transactionCount);
+  els.chartBalanceTotal.classList.toggle("negative", data.balance < 0);
+
+  const emptyMessage =
+    state.chart.tab === "income"
+      ? "No income entries for this year."
+      : state.chart.tab === "expense"
+        ? "No expense entries for this year."
+        : "No data for this year.";
+
+  if (state.chart.tab === "balance") {
+    renderChartBreakdown(
+      [
+        { category: "Income", amountCents: data.incomeTotal, percent: data.maxTotal ? (data.incomeTotal / data.maxTotal) * 100 : 0 },
+        { category: "Expense", amountCents: data.expenseTotal, percent: data.maxTotal ? (data.expenseTotal / data.maxTotal) * 100 : 0 },
+      ],
+      emptyMessage
+    );
+  } else {
+    renderChartBreakdown(data.breakdown, emptyMessage);
+  }
 }
 
 function updateStatus(message) {
@@ -157,10 +356,11 @@ function updateStatus(message) {
 function createBackupPayload() {
   return {
     app: "My Wallet",
-    schemaVersion: 1,
+    schemaVersion: 2,
     exportedAt: new Date().toISOString(),
     settings: state.settings,
     expenses: state.expenses,
+    transactions: state.expenses,
     recurring: state.recurring,
   };
 }
@@ -180,7 +380,7 @@ function downloadTextFile(filename, text) {
 function exportBackup() {
   const payload = createBackupPayload();
   const stamp = new Date().toISOString().slice(0, 10);
-  const filename = `ledger-loop-backup-${stamp}.json`;
+  const filename = `my-wallet-backup-${stamp}.json`;
   downloadTextFile(filename, `${JSON.stringify(payload, null, 2)}\n`);
   updateStatus("Backup exported");
 }
@@ -192,7 +392,12 @@ function importBackupClick() {
 
 function validateBackupPayload(payload) {
   if (!payload || typeof payload !== "object") return null;
-  if (!Array.isArray(payload.expenses)) return null;
+  const importedExpenses = Array.isArray(payload.transactions)
+    ? payload.transactions
+    : Array.isArray(payload.expenses)
+      ? payload.expenses
+      : null;
+  if (!importedExpenses) return null;
   if (!Array.isArray(payload.recurring)) return null;
   const settings = payload.settings && Array.isArray(payload.settings.categories)
     ? { ...DEFAULT_SETTINGS, ...payload.settings }
@@ -200,7 +405,7 @@ function validateBackupPayload(payload) {
 
   return {
     settings,
-    expenses: payload.expenses,
+    expenses: importedExpenses,
     recurring: payload.recurring,
   };
 }
@@ -244,18 +449,20 @@ function setExpenseEditMode(expense) {
   if (!expense) {
     els.expenseForm.reset();
     els.expenseId.value = "";
+    els.expenseType.value = "expense";
     els.expenseDate.value = today();
-    els.expenseSubmit.textContent = "Add expense";
+    els.expenseSubmit.textContent = "Add transaction";
     els.expenseCancel.classList.add("hidden");
     return;
   }
 
   els.expenseId.value = expense.id;
   els.expenseAmount.value = (Number(expense.amountCents) / 100).toFixed(2);
+  els.expenseType.value = expense.entryType || "expense";
   els.expenseCategory.value = expense.category;
   els.expenseDate.value = expense.date;
   els.expenseNote.value = expense.note || "";
-  els.expenseSubmit.textContent = "Update expense";
+  els.expenseSubmit.textContent = "Update transaction";
   els.expenseCancel.classList.remove("hidden");
 }
 
@@ -327,11 +534,15 @@ function renderSummary() {
   els.todayTotal.textContent = formatMoney(totals.today);
   els.weekTotal.textContent = formatMoney(totals.week);
   els.monthTotal.textContent = formatMoney(totals.month);
+  els.todayTotal.classList.toggle("negative", totals.today < 0);
+  els.weekTotal.classList.toggle("negative", totals.week < 0);
+  els.monthTotal.classList.toggle("negative", totals.month < 0);
 }
 
 function expenseCard(expense) {
   const card = document.createElement("article");
   card.className = "expense-card";
+  card.dataset.entryType = expense.entryType || "expense";
 
   const top = document.createElement("div");
   top.className = "expense-top";
@@ -344,17 +555,19 @@ function expenseCard(expense) {
 
   const meta = document.createElement("div");
   meta.className = "meta-row";
-  const sourceLabel = expense.sourceType === "recurring" ? "Recurring occurrence" : "Manual expense";
+  const sourceLabel = expense.sourceType === "recurring" ? "Recurring occurrence" : "Manual entry";
+  const typeLabel = expense.entryType === "income" ? "Income" : "Expense";
   meta.innerHTML = `
     <span>${expense.date}</span>
     <span>${expense.category}</span>
+    <span>${typeLabel}</span>
     <span>${sourceLabel}</span>
   `;
   left.appendChild(meta);
 
   const amount = document.createElement("div");
   amount.className = "amount";
-  amount.textContent = `-${formatMoney(expense.amountCents)}`;
+  amount.textContent = `${expense.entryType === "income" ? "+" : "-"}${formatMoney(expense.amountCents)}`;
 
   top.append(left, amount);
 
@@ -365,6 +578,11 @@ function expenseCard(expense) {
   sourceBadge.className = `badge ${expense.sourceType === "recurring" ? "recurring" : "manual"}`;
   sourceBadge.textContent = expense.sourceType === "recurring" ? "Recurring" : "Manual";
   badges.appendChild(sourceBadge);
+
+  const typeBadge = document.createElement("span");
+  typeBadge.className = `badge ${expense.entryType === "income" ? "active" : "inactive"}`;
+  typeBadge.textContent = expense.entryType === "income" ? "Income" : "Expense";
+  badges.appendChild(typeBadge);
 
   if (expense.sourceType === "recurring") {
     const freqBadge = document.createElement("span");
@@ -431,7 +649,7 @@ function recurringCard(plan) {
 
   const amount = document.createElement("div");
   amount.className = "amount";
-  amount.textContent = formatMoney(plan.amountCents);
+  amount.textContent = `-${formatMoney(plan.amountCents)}`;
 
   top.append(left, amount);
 
@@ -571,14 +789,14 @@ function renderExpenseList() {
 
   els.activitySubtitle.textContent =
     state.filters.range === "all"
-      ? `Showing all local expenses and virtual recurring entries.`
+      ? `Showing all local transactions and virtual recurring entries.`
       : `Showing entries from ${start} to ${end}.`;
 
   els.expenseList.innerHTML = "";
   if (!visible.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.textContent = "No expenses match the current filters.";
+    empty.textContent = "No transactions match the current filters.";
     els.expenseList.appendChild(empty);
     return;
   }
@@ -635,6 +853,7 @@ async function refreshData(rebuild = true) {
   renderCategoryEditor();
   renderRecurringList();
   renderExpenseList();
+  renderCharts();
 }
 
 function handleExpenseSubmit(event) {
@@ -644,6 +863,7 @@ function handleExpenseSubmit(event) {
   const expense = {
     id,
     amountCents: Math.round(Number(els.expenseAmount.value) * 100),
+    entryType: els.expenseType.value === "income" ? "income" : "expense",
     category: els.expenseCategory.value,
     date: els.expenseDate.value,
     note: normalizeText(els.expenseNote.value),
@@ -699,6 +919,11 @@ function wireEvents() {
     renderExpenseList();
   });
 
+  els.filterType.addEventListener("change", () => {
+    state.filters.type = els.filterType.value;
+    renderExpenseList();
+  });
+
   els.filterSource.addEventListener("change", () => {
     state.filters.source = els.filterSource.value;
     renderExpenseList();
@@ -724,6 +949,24 @@ function wireEvents() {
   els.importButton.addEventListener("click", importBackupClick);
   els.importButtonBottom.addEventListener("click", importBackupClick);
   els.importFile.addEventListener("change", handleImportFile);
+
+  els.chartTabs.forEach((button) => {
+    button.addEventListener("click", () => setChartTab(button.dataset.chartTab));
+  });
+
+  els.yearPrev.addEventListener("click", () => {
+    const index = state.chart.years.indexOf(state.chart.year);
+    if (index > 0) {
+      setChartYear(state.chart.years[index - 1]);
+    }
+  });
+
+  els.yearNext.addEventListener("click", () => {
+    const index = state.chart.years.indexOf(state.chart.year);
+    if (index >= 0 && index < state.chart.years.length - 1) {
+      setChartYear(state.chart.years[index + 1]);
+    }
+  });
 
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
@@ -753,8 +996,10 @@ async function registerServiceWorker() {
 
 async function boot() {
   els.expenseDate.value = today();
+  els.expenseType.value = "expense";
   els.recurringStart.value = today();
   state.filters.range = els.filterRange.value;
+  state.filters.type = els.filterType.value;
 
   wireEvents();
   await initDatabase();
