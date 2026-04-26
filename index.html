@@ -134,6 +134,42 @@
 
       <section class="panel">
         <div class="panel-header">
+          <h2>Annual history</h2>
+          <p>See everything from 2024, 2025, or all years together.</p>
+        </div>
+        <div class="history-controls">
+          <label>
+            <span>Year</span>
+            <select id="historyYear">
+              <option value="2024">2024</option>
+              <option value="2025" selected>2025</option>
+              <option value="all">All years</option>
+            </select>
+          </label>
+        </div>
+        <div class="history-summary">
+          <article class="summary-card compact-card">
+            <span>Income</span>
+            <strong id="historyIncome">$0.00</strong>
+          </article>
+          <article class="summary-card compact-card">
+            <span>Expense</span>
+            <strong id="historyExpense">$0.00</strong>
+          </article>
+          <article class="summary-card compact-card">
+            <span>Balance</span>
+            <strong id="historyBalance">$0.00</strong>
+          </article>
+          <article class="summary-card compact-card">
+            <span>Transactions</span>
+            <strong id="historyCount">0</strong>
+          </article>
+        </div>
+        <div id="historyList" class="stack-list" aria-live="polite"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
           <h2>Recurring expenses</h2>
           <p>Define repeat costs once. The app generates them when calculating totals and recent activity.</p>
         </div>
@@ -184,15 +220,18 @@
         </form>
       </section>
 
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Filters</h2>
-          <p>Search by note or category and narrow the timeline on the phone.</p>
-        </div>
-        <div class="toolbar">
+      <details class="panel accordion-panel">
+        <summary class="accordion-summary">
+          <span>
+            <strong>Search & filters</strong>
+            <em>Optional tools to find a transaction or narrow the list.</em>
+          </span>
+          <span class="accordion-caret">⌄</span>
+        </summary>
+        <div class="toolbar accordion-body">
           <label class="search-field">
             <span>Search</span>
-            <input id="searchInput" type="search" placeholder="Search expenses" />
+            <input id="searchInput" type="search" placeholder="Search note or category" />
           </label>
           <div class="filter-grid">
             <label>
@@ -226,7 +265,7 @@
             </label>
           </div>
         </div>
-      </section>
+      </details>
 
       <section class="panel">
         <div class="panel-header">
@@ -244,13 +283,18 @@
         <div id="recurringList" class="stack-list" aria-live="polite"></div>
       </section>
 
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Categories</h2>
-          <p>Editable defaults that stay local to this device.</p>
+      <details class="panel accordion-panel">
+        <summary class="accordion-summary">
+          <span>
+            <strong>Categories</strong>
+            <em>Editable defaults that stay local to this device.</em>
+          </span>
+          <span class="accordion-caret">⌄</span>
+        </summary>
+        <div class="accordion-body">
+          <div id="categoryList" class="category-list" aria-live="polite"></div>
         </div>
-        <div id="categoryList" class="category-list" aria-live="polite"></div>
-      </section>
+      </details>
 
       <section class="panel">
         <div class="panel-header">

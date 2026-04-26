@@ -52,6 +52,12 @@ const els = {
   chartTransactionsCount: document.getElementById("chartTransactionsCount"),
   chartBreakdown: document.getElementById("chartBreakdown"),
   chartTabs: Array.from(document.querySelectorAll("[data-chart-tab]")),
+  historyYear: document.getElementById("historyYear"),
+  historyIncome: document.getElementById("historyIncome"),
+  historyExpense: document.getElementById("historyExpense"),
+  historyBalance: document.getElementById("historyBalance"),
+  historyCount: document.getElementById("historyCount"),
+  historyList: document.getElementById("historyList"),
   activitySubtitle: document.getElementById("activitySubtitle"),
   expenseList: document.getElementById("expenseList"),
   recurringList: document.getElementById("recurringList"),
@@ -99,6 +105,9 @@ const state = {
     tab: "income",
     year: new Date().getFullYear(),
     years: [],
+  },
+  history: {
+    year: "all",
   },
   deferredInstallPrompt: null,
 };
@@ -160,8 +169,8 @@ function yearRange(year) {
   };
 }
 
-function getAvailableYears(entries) {
-  const years = new Set([new Date().getFullYear()]);
+function getDataYears(entries) {
+  const years = new Set();
   entries.forEach((entry) => {
     if (entry?.date) {
       years.add(Number(entry.date.slice(0, 4)));
@@ -174,6 +183,39 @@ function getAvailableYears(entries) {
   return Array.from(years)
     .filter((year) => Number.isFinite(year))
     .sort((a, b) => a - b);
+}
+
+function getAvailableYears(entries) {
+  const years = new Set(getDataYears(entries));
+  years.add(new Date().getFullYear());
+  return Array.from(years).sort((a, b) => a - b);
+}
+
+function buildHistoryYearSelect() {
+  const current = els.historyYear.value || state.history.year || "all";
+  const years = getDataYears(state.expenses);
+  const options = years.map((year) => String(year));
+
+  els.historyYear.innerHTML = "";
+  const allOption = document.createElement("option");
+  allOption.value = "all";
+  allOption.textContent = "All years";
+  els.historyYear.appendChild(allOption);
+
+  options.forEach((year) => {
+    const option = document.createElement("option");
+    option.value = year;
+    option.textContent = year;
+    els.historyYear.appendChild(option);
+  });
+
+  if (!options.includes(current) && current !== "all") {
+    state.history.year = options[options.length - 1] || "all";
+  } else {
+    state.history.year = current;
+  }
+
+  els.historyYear.value = state.history.year;
 }
 
 function filterExpenses(expenses, filters) {
@@ -253,6 +295,24 @@ function calculateChartData(year) {
       state.chart.tab === "income"
         ? buildCategoryBreakdown(combined, "income")
         : buildCategoryBreakdown(combined, "expense"),
+  };
+}
+
+function getHistoryEntries() {
+  if (state.history.year === "all") {
+    return state.allCombinedExpenses.slice();
+  }
+  return state.allCombinedExpenses.filter(
+    (entry) => entry.date.slice(0, 4) === String(state.history.year)
+  );
+}
+
+function calculateHistorySummary(entries) {
+  return {
+    income: sumByType(entries, "income"),
+    expense: sumByType(entries, "expense"),
+    balance: sumByType(entries, "income") - sumByType(entries, "expense"),
+    count: entries.length,
   };
 }
 
@@ -347,6 +407,31 @@ function renderCharts() {
   } else {
     renderChartBreakdown(data.breakdown, emptyMessage);
   }
+}
+
+function renderHistory() {
+  const entries = getHistoryEntries();
+  const summary = calculateHistorySummary(entries);
+
+  els.historyIncome.textContent = formatMoney(summary.income);
+  els.historyExpense.textContent = formatMoney(summary.expense);
+  els.historyBalance.textContent = formatMoney(summary.balance);
+  els.historyBalance.classList.toggle("negative", summary.balance < 0);
+  els.historyCount.textContent = String(summary.count);
+
+  els.historyList.innerHTML = "";
+  if (!entries.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent =
+      state.history.year === "all"
+        ? "No transactions recorded yet."
+        : `No transactions found for ${state.history.year}.`;
+    els.historyList.appendChild(empty);
+    return;
+  }
+
+  entries.forEach((entry) => els.historyList.appendChild(expenseCard(entry)));
 }
 
 function updateStatus(message) {
@@ -850,10 +935,12 @@ async function refreshData(rebuild = true) {
   buildCategorySelect(els.expenseCategory, els.expenseCategory.value);
   buildCategorySelect(els.recurringCategory, els.recurringCategory.value);
   buildCategoryFilterSelect();
+  buildHistoryYearSelect();
   renderCategoryEditor();
   renderRecurringList();
   renderExpenseList();
   renderCharts();
+  renderHistory();
 }
 
 function handleExpenseSubmit(event) {
@@ -934,6 +1021,11 @@ function wireEvents() {
     buildCombinedData();
     renderSummary();
     renderExpenseList();
+  });
+
+  els.historyYear.addEventListener("change", () => {
+    state.history.year = els.historyYear.value;
+    renderHistory();
   });
 
   els.installButton.addEventListener("click", async () => {
