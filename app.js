@@ -511,7 +511,7 @@ function downloadTextFile(filename, text) {
   URL.revokeObjectURL(url);
 }
 
-function parseCSVLine(line) {
+function parseCSVLine(line, delimiter = ",") {
   const cells = [];
   let current = "";
   let inQuotes = false;
@@ -530,7 +530,7 @@ function parseCSVLine(line) {
       continue;
     }
 
-    if (char === "," && !inQuotes) {
+    if (char === delimiter && !inQuotes) {
       cells.push(current);
       current = "";
       continue;
@@ -543,30 +543,68 @@ function parseCSVLine(line) {
   return cells.map((cell) => cell.trim());
 }
 
+function detectCSVDelimiter(lines) {
+  const candidateLines = lines.slice(0, 5);
+  const delimiters = [",", ";", "\t"];
+
+  let bestDelimiter = ",";
+  let bestScore = -1;
+
+  delimiters.forEach((delimiter) => {
+    const score = candidateLines.reduce((total, line) => {
+      return total + Math.max(line.split(delimiter).length - 1, 0);
+    }, 0);
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestDelimiter = delimiter;
+    }
+  });
+
+  return bestDelimiter;
+}
+
 function parseCSVText(text) {
   const lines = text
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
     .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
+    .map((line) => line.trim());
 
-  if (!lines.length) {
+  const nonEmptyLines = lines.filter(Boolean);
+
+  if (!nonEmptyLines.length) {
     return [];
   }
 
-  const headers = parseCSVLine(lines[0]).map((header) => header.toLowerCase());
+  const delimiter = detectCSVDelimiter(nonEmptyLines);
+  const headerLineIndex = lines.findIndex((line) => line && parseCSVLine(line, delimiter).some((cell) => cell));
+
+  if (headerLineIndex === -1) {
+    return [];
+  }
+
+  const headers = parseCSVLine(lines[headerLineIndex], delimiter)
+    .map((header) => header.toLowerCase())
+    .filter(Boolean);
   const records = [];
 
-  for (let index = 1; index < lines.length; index += 1) {
-    const values = parseCSVLine(lines[index]);
+  for (let index = headerLineIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (!line) {
+      continue;
+    }
+
+    const values = parseCSVLine(line, delimiter);
     const row = {};
 
     headers.forEach((header, headerIndex) => {
       row[header] = values[headerIndex] ?? "";
     });
 
-    records.push(row);
+    if (Object.values(row).some((value) => normalizeText(value))) {
+      records.push(row);
+    }
   }
 
   return records;
