@@ -38,7 +38,6 @@ const els = {
   todayTotal: document.getElementById("todayTotal"),
   weekTotal: document.getElementById("weekTotal"),
   monthTotal: document.getElementById("monthTotal"),
-  chartPeriod: document.getElementById("chartPeriod"),
   chartYearLabel: document.getElementById("chartYearLabel"),
   chartRangeLabel: document.getElementById("chartRangeLabel"),
   yearSwitcher: document.getElementById("yearSwitcher"),
@@ -54,6 +53,7 @@ const els = {
   chartBalanceTotal: document.getElementById("chartBalanceTotal"),
   chartTransactionsCount: document.getElementById("chartTransactionsCount"),
   chartBreakdown: document.getElementById("chartBreakdown"),
+  chartPeriodButtons: Array.from(document.querySelectorAll("[data-chart-period]")),
   chartTabs: Array.from(document.querySelectorAll("[data-chart-tab]")),
   historyYear: document.getElementById("historyYear"),
   historyIncome: document.getElementById("historyIncome"),
@@ -355,6 +355,9 @@ function setChartYear(year) {
 
 function setChartPeriod(period) {
   state.chart.period = period;
+  els.chartPeriodButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.chartPeriod === period);
+  });
   renderCharts();
 }
 
@@ -415,9 +418,9 @@ function renderCharts() {
   const data = calculateChartData(state.chart.year);
   const rangeLabel =
     state.chart.period === "weekly"
-      ? "Current week"
+      ? "This week"
       : state.chart.period === "monthly"
-        ? "Current month"
+        ? "This month"
         : String(state.chart.year);
 
   const incomeWidth = data.maxTotal ? (data.incomeTotal / data.maxTotal) * 100 : 0;
@@ -1067,8 +1070,8 @@ function wireEvents() {
     renderExpenseList();
   });
 
-  els.chartPeriod.addEventListener("change", () => {
-    setChartPeriod(els.chartPeriod.value);
+  els.chartPeriodButtons.forEach((button) => {
+    button.addEventListener("click", () => setChartPeriod(button.dataset.chartPeriod));
   });
 
   els.historyYear.addEventListener("change", () => {
@@ -1140,7 +1143,10 @@ async function boot() {
   els.recurringStart.value = today();
   state.filters.range = els.filterRange.value;
   state.filters.type = els.filterType.value;
-  state.chart.period = els.chartPeriod.value;
+  state.chart.period = document.querySelector("[data-chart-period].active")?.dataset.chartPeriod || "annual";
+  els.chartPeriodButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.chartPeriod === state.chart.period);
+  });
 
   wireEvents();
   await initDatabase();

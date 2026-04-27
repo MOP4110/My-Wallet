@@ -92,16 +92,10 @@
           <p>Balance and category breakdown by week, month, or year.</p>
         </div>
         <div class="chart-controls">
-          <div class="chart-meta">
-            <label>
-              <span>Period</span>
-              <select id="chartPeriod">
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="annual" selected>Annual</option>
-              </select>
-            </label>
-            <div class="chart-range-label" id="chartRangeLabel">2025</div>
+          <div class="period-tabs" role="tablist" aria-label="Chart period">
+            <button type="button" class="period-tab" data-chart-period="weekly">Weekly</button>
+            <button type="button" class="period-tab" data-chart-period="monthly">Monthly</button>
+            <button type="button" class="period-tab active" data-chart-period="annual">Annual</button>
           </div>
           <div class="chart-tabs" role="tablist" aria-label="Chart types">
             <button type="button" class="chart-tab active" data-chart-tab="income">Income</button>
@@ -113,6 +107,7 @@
             <div class="year-label" id="chartYearLabel">2025</div>
             <button type="button" class="secondary" id="yearNext">›</button>
           </div>
+          <div class="chart-range-label" id="chartRangeLabel">2025</div>
         </div>
         <div class="chart-panel">
           <div class="chart-summary">

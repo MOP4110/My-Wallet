@@ -291,18 +291,29 @@ h1 {
   gap: 12px;
 }
 
-.chart-meta {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: minmax(150px, 180px) 1fr;
-  align-items: end;
-}
-
 .chart-range-label {
-  justify-self: end;
+  justify-self: start;
   color: var(--accent);
   font-weight: 800;
   font-size: 1rem;
+}
+
+.period-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.period-tab {
+  border-radius: 14px;
+  background: #f1f5f9;
+  color: #49607a;
+  box-shadow: none;
+}
+
+.period-tab.active {
+  background: var(--accent);
+  color: white;
 }
 
 .history-controls {
