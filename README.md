@@ -45,6 +45,7 @@ The app includes two backup actions:
 - `Import backup` restores the data from a JSON file into the current device.
 
 The exported file is plain JSON, so you can open it in any text editor if you want to inspect it.
+If that file contains transactions from 2024 or 2025, importing it will keep those dates and they will appear in the annual history and charts.
 
 Suggested use:
 

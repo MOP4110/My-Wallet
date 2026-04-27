@@ -291,6 +291,20 @@ h1 {
   gap: 12px;
 }
 
+.chart-meta {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(150px, 180px) 1fr;
+  align-items: end;
+}
+
+.chart-range-label {
+  justify-self: end;
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 1rem;
+}
+
 .history-controls {
   display: grid;
   gap: 12px;

@@ -38,7 +38,10 @@ const els = {
   todayTotal: document.getElementById("todayTotal"),
   weekTotal: document.getElementById("weekTotal"),
   monthTotal: document.getElementById("monthTotal"),
+  chartPeriod: document.getElementById("chartPeriod"),
   chartYearLabel: document.getElementById("chartYearLabel"),
+  chartRangeLabel: document.getElementById("chartRangeLabel"),
+  yearSwitcher: document.getElementById("yearSwitcher"),
   yearPrev: document.getElementById("yearPrev"),
   yearNext: document.getElementById("yearNext"),
   incomeBar: document.getElementById("incomeBar"),
@@ -103,6 +106,7 @@ const state = {
   },
   chart: {
     tab: "income",
+    period: "annual",
     year: new Date().getFullYear(),
     years: [],
   },
@@ -169,6 +173,16 @@ function yearRange(year) {
   };
 }
 
+function currentWeekRange() {
+  const end = today();
+  return { start: startOfWeek(end), end };
+}
+
+function currentMonthRange() {
+  const end = today();
+  return { start: startOfMonth(end), end };
+}
+
 function getDataYears(entries) {
   const years = new Set();
   entries.forEach((entry) => {
@@ -189,6 +203,16 @@ function getAvailableYears(entries) {
   const years = new Set(getDataYears(entries));
   years.add(new Date().getFullYear());
   return Array.from(years).sort((a, b) => a - b);
+}
+
+function getChartRange() {
+  if (state.chart.period === "weekly") {
+    return currentWeekRange();
+  }
+  if (state.chart.period === "monthly") {
+    return currentMonthRange();
+  }
+  return yearRange(state.chart.year);
 }
 
 function buildHistoryYearSelect() {
@@ -276,7 +300,7 @@ function buildCategoryBreakdown(expenses, type) {
 }
 
 function calculateChartData(year) {
-  const range = yearRange(year);
+  const range = getChartRange();
   const combined = buildCombinedExpenses(state.expenses, state.recurring, range.start, range.end);
   const incomeTotal = sumByType(combined, "income");
   const expenseTotal = sumByType(combined, "expense");
@@ -329,7 +353,19 @@ function setChartYear(year) {
   renderCharts();
 }
 
+function setChartPeriod(period) {
+  state.chart.period = period;
+  renderCharts();
+}
+
 function syncChartYearBounds() {
+  if (state.chart.period !== "annual") {
+    els.yearPrev.disabled = true;
+    els.yearNext.disabled = true;
+    els.chartYearLabel.textContent = state.chart.period === "weekly" ? "Weekly view" : "Monthly view";
+    return;
+  }
+
   const years = getAvailableYears(state.expenses);
   state.chart.years = years.length ? years : [new Date().getFullYear()];
   if (!state.chart.years.includes(state.chart.year)) {
@@ -377,10 +413,18 @@ function renderChartBreakdown(items, emptyMessage) {
 function renderCharts() {
   syncChartYearBounds();
   const data = calculateChartData(state.chart.year);
+  const rangeLabel =
+    state.chart.period === "weekly"
+      ? "Current week"
+      : state.chart.period === "monthly"
+        ? "Current month"
+        : String(state.chart.year);
 
   const incomeWidth = data.maxTotal ? (data.incomeTotal / data.maxTotal) * 100 : 0;
   const expenseWidth = data.maxTotal ? (data.expenseTotal / data.maxTotal) * 100 : 0;
 
+  els.chartRangeLabel.textContent = rangeLabel;
+  els.yearSwitcher.classList.toggle("hidden", state.chart.period !== "annual");
   els.incomeBar.style.width = `${incomeWidth}%`;
   els.expenseBar.style.width = `${expenseWidth}%`;
   els.chartIncomeTotal.textContent = formatMoney(data.incomeTotal);
@@ -1023,6 +1067,10 @@ function wireEvents() {
     renderExpenseList();
   });
 
+  els.chartPeriod.addEventListener("change", () => {
+    setChartPeriod(els.chartPeriod.value);
+  });
+
   els.historyYear.addEventListener("change", () => {
     state.history.year = els.historyYear.value;
     renderHistory();
@@ -1092,6 +1140,7 @@ async function boot() {
   els.recurringStart.value = today();
   state.filters.range = els.filterRange.value;
   state.filters.type = els.filterType.value;
+  state.chart.period = els.chartPeriod.value;
 
   wireEvents();
   await initDatabase();

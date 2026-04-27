@@ -89,15 +89,26 @@
       <section class="panel">
         <div class="panel-header">
           <h2>Charts</h2>
-          <p>Balance and category breakdown by year.</p>
+          <p>Balance and category breakdown by week, month, or year.</p>
         </div>
         <div class="chart-controls">
+          <div class="chart-meta">
+            <label>
+              <span>Period</span>
+              <select id="chartPeriod">
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="annual" selected>Annual</option>
+              </select>
+            </label>
+            <div class="chart-range-label" id="chartRangeLabel">2025</div>
+          </div>
           <div class="chart-tabs" role="tablist" aria-label="Chart types">
             <button type="button" class="chart-tab active" data-chart-tab="income">Income</button>
             <button type="button" class="chart-tab" data-chart-tab="balance">Balance</button>
             <button type="button" class="chart-tab" data-chart-tab="expense">Expense</button>
           </div>
-          <div class="year-switcher">
+          <div class="year-switcher" id="yearSwitcher">
             <button type="button" class="secondary" id="yearPrev">‹</button>
             <div class="year-label" id="chartYearLabel">2025</div>
             <button type="button" class="secondary" id="yearNext">›</button>
