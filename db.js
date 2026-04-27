@@ -1,24 +1,52 @@
 const DB_NAME = "ledger-loop-db";
 const DB_VERSION = 1;
 const SETTINGS_ID = "app-settings";
+const HISTORICAL_CATEGORIES = [
+  "Fun",
+  "Holidays",
+  "Restaurant",
+  "Food",
+  "Learning",
+  "Health",
+  "Fuel",
+  "Clothes",
+  "Gifts",
+  "Home",
+  "Entertainment",
+  "Auto",
+  "Sports",
+  "General",
+  "Bills",
+];
 
 const DEFAULT_SETTINGS = {
   id: SETTINGS_ID,
-  categories: [
-    "Food",
-    "Groceries",
-    "Transport",
-    "Home",
-    "Bills",
-    "Health",
-    "Shopping",
-    "Travel",
-    "Subscriptions",
-    "Other",
-  ],
+  categories: HISTORICAL_CATEGORIES,
 };
 
 let dbPromise;
+
+function normalizeCategories(categories) {
+  const next = Array.isArray(categories) ? categories : [];
+  const merged = [...HISTORICAL_CATEGORIES];
+
+  next.forEach((category) => {
+    if (typeof category !== "string") {
+      return;
+    }
+
+    const trimmed = category.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    if (!merged.some((item) => item.toLowerCase() === trimmed.toLowerCase())) {
+      merged.push(trimmed);
+    }
+  });
+
+  return merged;
+}
 
 function requestToPromise(request) {
   return new Promise((resolve, reject) => {
@@ -107,6 +135,16 @@ export async function initDatabase() {
   const existing = await getSettings();
   if (!existing) {
     await saveSettings(DEFAULT_SETTINGS);
+  } else {
+    const normalized = {
+      ...DEFAULT_SETTINGS,
+      ...existing,
+      categories: normalizeCategories(existing.categories),
+    };
+
+    if (JSON.stringify(normalized.categories) !== JSON.stringify(existing.categories || [])) {
+      await saveSettings(normalized);
+    }
   }
   db.close?.();
   dbPromise = undefined;
@@ -188,7 +226,7 @@ export async function clearAllData() {
 
 export async function replaceAllData({ settings, expenses, recurring }) {
   const normalizedSettings = settings && Array.isArray(settings.categories)
-    ? { ...DEFAULT_SETTINGS, ...settings, id: SETTINGS_ID }
+    ? { ...DEFAULT_SETTINGS, ...settings, id: SETTINGS_ID, categories: normalizeCategories(settings.categories) }
     : { ...DEFAULT_SETTINGS };
   const normalizedExpenses = Array.isArray(expenses) ? expenses : [];
   const normalizedRecurring = Array.isArray(recurring) ? recurring : [];
