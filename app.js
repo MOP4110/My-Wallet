@@ -34,7 +34,9 @@ const els = {
   importButton: document.getElementById("importButton"),
   exportButtonBottom: document.getElementById("exportButtonBottom"),
   importButtonBottom: document.getElementById("importButtonBottom"),
+  importCsvButton: document.getElementById("importCsvButton"),
   importFile: document.getElementById("importFile"),
+  importCsvFile: document.getElementById("importCsvFile"),
   todayTotal: document.getElementById("todayTotal"),
   weekTotal: document.getElementById("weekTotal"),
   monthTotal: document.getElementById("monthTotal"),
@@ -507,6 +509,151 @@ function downloadTextFile(filename, text) {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function parseCSVLine(line) {
+  const cells = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const next = line[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      cells.push(current);
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  cells.push(current);
+  return cells.map((cell) => cell.trim());
+}
+
+function parseCSVText(text) {
+  const lines = text
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (!lines.length) {
+    return [];
+  }
+
+  const headers = parseCSVLine(lines[0]).map((header) => header.toLowerCase());
+  const records = [];
+
+  for (let index = 1; index < lines.length; index += 1) {
+    const values = parseCSVLine(lines[index]);
+    const row = {};
+
+    headers.forEach((header, headerIndex) => {
+      row[header] = values[headerIndex] ?? "";
+    });
+
+    records.push(row);
+  }
+
+  return records;
+}
+
+function parseCSVAmount(value) {
+  const normalized = String(value ?? "")
+    .replace(/\s+/g, "")
+    .replace(/[€$£]/g, "")
+    .replace(/,/g, ".")
+    .replace(/[^0-9.-]/g, "");
+  const amount = Number(normalized);
+  return Number.isFinite(amount) ? amount : null;
+}
+
+function normalizeCSVRow(row, index) {
+  const date = normalizeText(row.date);
+  const amount = parseCSVAmount(row.amount);
+  const category = normalizeText(row.category);
+  const type = normalizeText(row.type).toLowerCase() === "income" ? "income" : "expense";
+  const note = normalizeText(row.note);
+
+  if (!date || amount === null || !category) {
+    return null;
+  }
+
+  return {
+    id: `csv_${date}_${category}_${type}_${amount.toFixed(2)}_${index}`,
+    amountCents: Math.round(Math.abs(amount) * 100),
+    entryType: type,
+    category,
+    date,
+    note,
+    sourceType: "manual",
+  };
+}
+
+async function importCsvExpensesClick() {
+  els.importCsvFile.value = "";
+  els.importCsvFile.click();
+}
+
+async function handleImportCsvFile(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    const rows = parseCSVText(text);
+    const imported = [];
+    const categories = new Set(state.settings.categories);
+
+    rows.forEach((row, index) => {
+      const transaction = normalizeCSVRow(row, index);
+      if (!transaction) {
+        return;
+      }
+
+      imported.push(transaction);
+      categories.add(transaction.category);
+    });
+
+    if (!imported.length) {
+      updateStatus("No valid CSV rows found");
+      return;
+    }
+
+    const confirmMessage =
+      `Import ${imported.length} CSV transactions into this device? This adds them to your existing data.`;
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    for (const transaction of imported) {
+      await saveExpense(transaction);
+    }
+
+    state.settings = { ...state.settings, categories: Array.from(categories) };
+    await saveSettings(state.settings);
+    await refreshData();
+    updateStatus("CSV imported");
+  } catch (error) {
+    console.error(error);
+    updateStatus("CSV import failed");
+  } finally {
+    els.importCsvFile.value = "";
+  }
 }
 
 function exportBackup() {
@@ -1092,6 +1239,8 @@ function wireEvents() {
   els.importButton.addEventListener("click", importBackupClick);
   els.importButtonBottom.addEventListener("click", importBackupClick);
   els.importFile.addEventListener("change", handleImportFile);
+  els.importCsvButton.addEventListener("click", importCsvExpensesClick);
+  els.importCsvFile.addEventListener("change", handleImportCsvFile);
 
   els.chartTabs.forEach((button) => {
     button.addEventListener("click", () => setChartTab(button.dataset.chartTab));
